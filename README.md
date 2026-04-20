@@ -80,8 +80,8 @@ It allows administrators to:
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/your-username/sentinel-advance.git
-cd sentinel-advance
+git clone https://github.com/shivam65660-cell/lab_controller.git
+cd lab_controller
 ```
 
 ### 2️⃣ Install Dependencies
