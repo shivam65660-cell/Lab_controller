@@ -87,7 +87,7 @@ cd lab_controller
 ### 2️⃣ Install Dependencies
 
 ```bash
-pip install flask flask-socketio pynput
+pip install -r requirements.txt
 ```
 
 ### 3️⃣ Run Application
