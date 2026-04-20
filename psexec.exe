@@ -1,0 +1,55 @@
+# Sahi Network Range Definition
+$NetworkPrefix = "192.168.0." 
+$Results = @()
+
+Write-Host "--- Lab Monitoring System: Active Scan Started ---" -ForegroundColor Cyan
+Write-Host "Scanning Range: $($NetworkPrefix)1 to $($NetworkPrefix)254" -ForegroundColor Gray
+
+# Step 1: Network Sweep (Sari IPs ko ping karke ARP cache populate karna)
+Write-Host "[*] Pinging all IPs to wake up the network..." -ForegroundColor Yellow
+1..254 | ForEach-Object -Parallel {
+    $IP = "$using:NetworkPrefix$_"
+    # Bahut fast ping (sirf 1 packet, short timeout) taaki ARP table update ho jaye
+    Test-Connection -ComputerName $IP -Count 1 -Quiet -ErrorAction SilentlyContinue
+} -ThrottleLimit 50
+
+# Step 2: ARP Table Analysis (Firewall bypass karne ke liye)
+Write-Host "[*] Analyzing ARP table and Resolving Hostnames..." -ForegroundColor Yellow
+$ArpTable = arp -a | Select-String "$NetworkPrefix"
+
+foreach ($line in $ArpTable) {
+    # Data clean up (IP extract karna)
+    $parts = $line.ToString().Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+    $IP = $parts[0]
+    
+    # Apni khud ki IP ko skip karein (192.168.0.190)
+    if ($IP -eq "192.168.0.190" -or $IP -eq "192.168.0.255") { continue }
+
+    try {
+        # DNS se PC Name pata karne ki koshish
+        $HostName = [System.Net.Dns]::GetHostEntry($IP).HostName
+    } catch {
+        $HostName = "Unknown (Check Firewall)"
+    }
+
+    Write-Host "[+] Found Active Device: $IP ($HostName)" -ForegroundColor Green
+    
+    $Results += [PSCustomObject]@{
+        IPAddress = $IP
+        PCName    = $HostName
+        Method    = "ARP/Switch Discovery"
+        ScanTime  = (Get-Date).ToString("HH:mm:ss")
+    }
+}
+
+# Step 3: Report Generation
+$Path = "$env:USERPROFILE\Desktop\Lab_Final_Scan.csv"
+
+if ($Results.Count -gt 0) {
+    $Results | Export-Csv -Path $Path -NoTypeInformation
+    Write-Host "`n[SUCCESS] Scan Complete!" -ForegroundColor White -BackgroundColor Green
+    Write-Host "Total PCs Found: $($Results.Count)" -ForegroundColor Cyan
+    Write-Host "Report Saved to: $Path" -ForegroundColor Yellow
+} else {
+    Write-Warning "No devices found. Ensure other PCs are ON and connected to the same Switch."
+}
